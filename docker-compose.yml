@@ -1,0 +1,88 @@
+services:
+  mqtt-publisher:
+    build: .
+    container_name: mqtt-publisher
+    environment:
+      - MQTT_BROKER=mqtt://mqtt-broker:1883
+      - MQTT_USERNAME=admin
+      - MQTT_PASSWORD=admin
+      - ENDPOINTS=2000
+      - ENDPOINT_INTERVAL=17.65
+      - CHECK_INTERVAL=5.0
+      - SPREAD_INTERVAL=30.0
+      - QOS=1
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - mqtt-broker
+    restart: unless-stopped
+    networks:
+      - mqtt-network
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    configs:
+      - source: mosquitto_conf
+        target: /mosquitto/config/mosquitto.conf
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_logs:/mosquitto/log
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "YWRtaW46JDckMTAxJCt1TlJpQkNxcEowOCt1eDckQkpOeXptajBUUnhlVHlOenJ1aGpHNHRkSWI3eE9TaGxXZThxRGRsWXp3b2VpaHRqeEJUMTJwQ3F5RXpTWndEemdBNy9JSUUxM05UaTd6elNUeWYyMFE9PQ==" | base64 -d > /mosquitto/config/mosquitto_passwd && \
+        cat /mosquitto/config/mosquitto_passwd && \
+        exec mosquitto -c /mosquitto/config/mosquitto.conf
+    networks:
+      - mqtt-network
+
+configs:
+  mosquitto_conf:
+    content: |
+      # Mosquitto configuration file for Docker
+      persistence true
+      persistence_location /mosquitto/data/
+      log_dest file /mosquitto/log/mosquitto.log
+      log_dest stdout
+
+      # Network settings
+      listener 1883
+      protocol mqtt
+
+      listener 9001
+      protocol websockets
+
+      # Authentication
+      allow_anonymous false
+      password_file /mosquitto/config/mosquitto_passwd
+
+      # Logging
+      log_type error
+      log_type warning
+      log_type notice
+      log_type information
+      connection_messages true
+      log_timestamp true
+
+      # Performance settings
+      max_inflight_messages 100
+      max_queued_messages 1000
+      message_size_limit 1024000
+
+      # Security settings
+      max_connections 2100
+      max_keepalive 300
+
+volumes:
+  mosquitto_data:
+  mosquitto_logs:
+
+networks:
+  mqtt-network:
+    driver: bridge
