@@ -41,20 +41,30 @@ class MQTTDataPublisher:
 
     def __init__(self, broker_url: str = "mqtt://localhost:1883",
                  username: str = "admin", password: str = "admin",
-                 client_id: Optional[str] = None):
+                 client_id: Optional[str] = None,
+                 topic_template: str = "sensor/data/{sensor_id:04d}",
+                 output_data_type: str = "sensor"):
         """
         Initialize the MQTT publisher with connection parameters.
 
         Args:
-            broker_url: MQTT broker URL (e.g., mqtt://broker:1883)
-            username: MQTT username for authentication
-            password: MQTT password for authentication
-            client_id: Custom client ID (auto-generated if None)
+            broker_url (str): MQTT broker URL (e.g., "mqtt://broker:1883")
+            username (str): MQTT username for authentication
+            password (str): MQTT password for authentication
+            client_id (Optional[str]): Custom client ID (auto-generated if None)
+            topic_template (str): Format string for MQTT topic.
+                Must include `{sensor_id}` placeholder.
+                Example: "services/opcua/setNode{sensor_id}/set"
+            output_data_type (str): Output data format.
+                - "sensor" → detailed industrial sensor JSON (default)
+                - "float" → simplified JSON like {"value": <float 0–60>}
         """
         self.broker_url = broker_url
         self.username = username
         self.password = password
         self.client_id = client_id or f"mqtt_publisher_{int(time.time())}"
+        self.topic_template = topic_template
+        self.output_data_type = output_data_type
 
         # Connection settings
         self.connected = False
@@ -243,7 +253,7 @@ class MQTTDataPublisher:
         self.connected = False
         logger.info("Disconnected from MQTT broker")
 
-    def generate_sensor_data(self, sensor_id: int) -> Dict[str, Any]:
+    def _generate_sensor_json(self, sensor_id: int) -> Dict[str, Any]:
         """
         Generate realistic sensor data for industrial applications.
 
@@ -385,6 +395,20 @@ class MQTTDataPublisher:
 
         return base_data
 
+    def _generate_float_value(self, sensor_id: int) -> Dict[str, float]:
+        return {"value": round(random.uniform(0.0, 60.0), 2)}
+
+    def generate_sensor_data(self, sensor_id: int) -> Dict[str, Any]:
+        """Dispatch to generator based on output_data_type."""
+        strategies = {
+            "sensor": self._generate_sensor_json,
+            "float": self._generate_float_value,
+        }
+        generator = strategies.get(self.output_data_type)
+        if not generator:
+            raise ValueError(f"Unsupported output_data_type: {self.output_data_type}")
+        return generator(sensor_id)
+
     def publish_to_endpoint(self, sensor_id: int) -> bool:
         """
         Publish data to a single sensor endpoint with per-endpoint rate limiting.
@@ -409,7 +433,7 @@ class MQTTDataPublisher:
 
         try:
             # Generate topic and data
-            topic = f"sensor/data/{sensor_id:04d}"
+            topic = self.topic_template.format(sensor_id=sensor_id)
             data = self.generate_sensor_data(sensor_id)
             payload = json.dumps(data, separators=(',', ':'))  # Compact JSON
 
@@ -730,6 +754,7 @@ def main():
                         default=os.getenv('MQTT_PASSWORD', 'admin'),
                         help='MQTT password')
     parser.add_argument('--client-id',
+                        default=os.getenv('MQTT_CLIENT_ID'),
                         help='MQTT client ID (auto-generated if not specified)')
 
     # Publisher arguments (with environment variable defaults)
@@ -750,6 +775,12 @@ def main():
                         help='MQTT QoS level')
     parser.add_argument('--retain', action='store_true',
                         help='Set retain flag on published messages')
+    parser.add_argument('--topic-template',
+                        default=os.getenv('TOPIC_TEMPLATE', 'sensor/data/{sensor_id:04d}'),
+                        help='MQTT topic template (use {sensor_id} placeholder)')
+    parser.add_argument('--output-data-type', choices=['sensor', 'float'],
+                        default=os.getenv('OUTPUT_DATA_TYPE', 'sensor'),
+                        help='Choose output data format: "sensor" (default) or "float"')
 
     # Logging arguments
     parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
@@ -766,7 +797,9 @@ def main():
         broker_url=args.broker,
         username=args.username,
         password=args.password,
-        client_id=args.client_id
+        client_id=args.client_id,
+        topic_template=args.topic_template,
+        output_data_type=args.output_data_type
     )
 
     # Configure publisher settings
