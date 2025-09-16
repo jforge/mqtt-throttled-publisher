@@ -6,7 +6,13 @@ A high-performance MQTT publisher tool that publishes realistic sensor data to m
 
 - **Per-Endpoint Rate Limiting**: Each endpoint respects individual rate limits (default: 17.65 seconds)
 - **Spread Distribution**: Eligible messages are spread evenly over configurable intervals
-- **Realistic Sensor Data**: Generates industrial sensor data (temperature, humidity, pressure, etc.)
+- **Flexible Data Output**:
+  - **Realistic Sensor Data**: Generates industrial sensor data (temperature, humidity, pressure, etc.) by default
+  - set **`OUTPUT_DATA_TYPE=float`** for simplified JSON like `{ "value": 42.37 }`
+- **Configurable Topic Template**:  
+  Use placeholders like `{sensor_id}` to control the MQTT topic format.  
+  By default topic is: `sensor/data/{sensor_id:04d}`  
+  Example: `TOPIC_TEMPLATE="services/opcua/setSensor{sensor_id:04d}/set"`
 - **High Performance**: Supports up to 2000 endpoints with ~112 msg/sec throughput
 - **Docker Support**: Full containerization with Docker Compose
 - **Flexible Configuration**: Extensive command-line and environment variable options
@@ -93,6 +99,9 @@ python mqtt_publisher_rate_limited.py --help
 Key parameters:
 - `--broker`: MQTT broker URL (default: mqtt://localhost:1883)
 - `--endpoints`: Number of endpoints (default: 2000)
+- `--client-id`: MQTT client ID (auto-generated if not specified)
+- `--topic-template`: MQTT topic template (default: sensor/data/{sensor_id:04d})
+- `--output-data-type`: Output data type ("sensor" or "float", default: sensor)
 - `--endpoint-interval`: Per-endpoint rate limit in seconds (default: 17.65)
 - `--check-interval`: How often to check for eligible endpoints (default: 5.0)
 - `--spread-interval`: Time to spread messages over (default: 30.0)
@@ -102,20 +111,24 @@ Key parameters:
 
 ### Environment Variables (Docker)
 
-| Variable | Default               | Description |
-|----------|-----------------------|-------------|
-| `MQTT_BROKER` | mqtt://localhost:1883 | MQTT broker URL |
-| `MQTT_USERNAME` | admin                 | MQTT username |
-| `MQTT_PASSWORD` | admin                 | MQTT password |
-| `ENDPOINTS` | 2000                  | Number of endpoints |
-| `ENDPOINT_INTERVAL` | 17.65                 | Per-endpoint rate limit (seconds) |
-| `CHECK_INTERVAL` | 5.0                   | Check frequency (seconds) |
-| `SPREAD_INTERVAL` | 30.0                  | Spread distribution time (seconds) |
-| `QOS` | 1                     | MQTT QoS level |
-| `LOG_LEVEL` | INFO                  | Logging level |
+| Variable            | Default                     | Description                               |
+|---------------------|-----------------------------|-------------------------------------------|
+| `MQTT_BROKER`       | mqtt://localhost:1883       | MQTT broker URL                           |
+| `MQTT_USERNAME`     | admin                       | MQTT username                             |
+| `MQTT_PASSWORD`     | admin                       | MQTT password                             |
+| `MQTT_CLIENT_ID`    | generated_id                | MQTT client id                            |
+| `ENDPOINTS`         | 2000                        | Number of endpoints                       |
+| `TOPIC_TEMPLATE`    | sensor/data/{sensor_id:04d} | Topic template (must include {sensor_id}) |
+| `OUTPUT_DATA_TYPE`  | sensor                      | Output format: sensor (detailed JSON)<br/> or float (simple value) |
+| `ENDPOINT_INTERVAL` | 17.65                       | Per-endpoint rate limit (seconds)         |
+| `CHECK_INTERVAL`    | 5.0                         | Check frequency (seconds)                 |
+| `SPREAD_INTERVAL`   | 30.0                        | Spread distribution time (seconds)        |
+| `QOS`               | 1                           | MQTT QoS level                            |
+| `LOG_LEVEL`         | INFO                        | Logging level                             |
 
-## Data Format
+## Data Formats
 
+### Sensor mode by default (`OUTPUT_DATA_TYPE=sensor`)
 The publisher generates realistic industrial sensor data:
 
 ```json 
@@ -143,6 +156,12 @@ The publisher generates realistic industrial sensor data:
 
 Supported sensor types:
 temperature, humidity, pressure, vibration, voltage, current, power, flow, level, speed.
+
+### Float mode (`OUTPUT_DATA_TYPE=float`)
+
+``` json
+{ "value": 37.84 }
+```
 
 ## Monitoring and Logs
 
@@ -255,4 +274,8 @@ For issues and questions:
     - Per-endpoint rate limiting
     - Docker containerization
     - Realistic sensor data generation
+- **v1.0.1**:
+    - Added support for topic templating (`TOPIC_TEMPLATE`)
+    - Added flexible output: choose between realistic industrial sensor data or simple float values (`OUTPUT_DATA_TYPE`)
+    - Added setup client ID via `MQTT_CLIENT_ID` environment variable
 ```
