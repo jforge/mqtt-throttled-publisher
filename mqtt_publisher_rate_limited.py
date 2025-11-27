@@ -20,15 +20,28 @@ from urllib.parse import urlparse
 import paho.mqtt.client as mqtt
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('mqtt_publisher.log')
-    ]
-)
-logger = logging.getLogger(__name__)
+handlers = [logging.StreamHandler()]
+
+try:
+    handlers.append(logging.FileHandler('mqtt_publisher.log'))
+except PermissionError:
+    # Fall back gracefully, no crash (e.g. OpenShift read-only FS)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "Cannot write log file mqtt_publisher.log, continuing with stdout only"
+    )
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+    logger = logging.getLogger(__name__)
 
 
 class MQTTDataPublisher:
