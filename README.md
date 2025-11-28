@@ -278,4 +278,6 @@ For issues and questions:
     - Added support for topic templating (`TOPIC_TEMPLATE`)
     - Added flexible output: choose between realistic industrial sensor data or simple float values (`OUTPUT_DATA_TYPE`)
     - Added setup client ID via `MQTT_CLIENT_ID` environment variable
+- **v1.0.2**:
+    - Added fallback to stdout when file logging fails (e.g., OpenShift read-only filesystem)
 ```
