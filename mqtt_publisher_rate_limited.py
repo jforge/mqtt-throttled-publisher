@@ -71,6 +71,7 @@ class MQTTDataPublisher:
             output_data_type (str): Output data format.
                 - "sensor" → detailed industrial sensor JSON (default)
                 - "float" → simplified JSON like {"value": <float 0–60>}
+                - "sequential" → simplified JSON like {"value": 1}, {"value": 2}, ...
         """
         self.broker_url = broker_url
         self.username = username
@@ -105,6 +106,8 @@ class MQTTDataPublisher:
         self.last_stats_time = 0
         self.last_stats_count = 0
         self.metrics_lock = threading.Lock()
+        self.sequential_value = 1
+        self.sequential_value_lock = threading.Lock()
 
         # Shutdown handling
         self.shutdown_event = threading.Event()
@@ -411,11 +414,18 @@ class MQTTDataPublisher:
     def _generate_float_value(self, sensor_id: int) -> Dict[str, float]:
         return {"value": round(random.uniform(0.0, 60.0), 2)}
 
+    def _generate_sequential_value(self, sensor_id: int) -> Dict[str, int]:
+        with self.sequential_value_lock:
+            current_value = self.sequential_value
+            self.sequential_value += 1
+        return {"value": current_value}
+
     def generate_sensor_data(self, sensor_id: int) -> Dict[str, Any]:
         """Dispatch to generator based on output_data_type."""
         strategies = {
             "sensor": self._generate_sensor_json,
             "float": self._generate_float_value,
+            "sequential": self._generate_sequential_value,
         }
         generator = strategies.get(self.output_data_type)
         if not generator:
@@ -791,9 +801,9 @@ def main():
     parser.add_argument('--topic-template',
                         default=os.getenv('TOPIC_TEMPLATE', 'sensor/data/{sensor_id:04d}'),
                         help='MQTT topic template (use {sensor_id} placeholder)')
-    parser.add_argument('--output-data-type', choices=['sensor', 'float'],
+    parser.add_argument('--output-data-type', choices=['sensor', 'float', 'sequential'],
                         default=os.getenv('OUTPUT_DATA_TYPE', 'sensor'),
-                        help='Choose output data format: "sensor" (default) or "float"')
+                        help='Choose output data format: "sensor" (default), "float", or "sequential"')
 
     # Logging arguments
     parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
