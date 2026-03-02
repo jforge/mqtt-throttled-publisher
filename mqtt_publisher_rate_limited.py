@@ -106,7 +106,7 @@ class MQTTDataPublisher:
         self.last_stats_time = 0
         self.last_stats_count = 0
         self.metrics_lock = threading.Lock()
-        self.sequential_value = 1
+        self.sequential_values = {}  # Track sequential value per sensor
         self.sequential_value_lock = threading.Lock()
 
         # Shutdown handling
@@ -416,8 +416,8 @@ class MQTTDataPublisher:
 
     def _generate_sequential_value(self, sensor_id: int) -> Dict[str, int]:
         with self.sequential_value_lock:
-            current_value = self.sequential_value
-            self.sequential_value += 1
+            current_value = self.sequential_values.get(sensor_id, 1)
+            self.sequential_values[sensor_id] = current_value + 1
         return {"value": current_value}
 
     def generate_sensor_data(self, sensor_id: int) -> Dict[str, Any]:
