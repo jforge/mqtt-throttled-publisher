@@ -291,4 +291,3 @@ For issues and questions:
     - Added fallback to stdout when file logging fails (e.g., OpenShift read-only filesystem)
 - **v1.0.3**:
     - Added `OUTPUT_DATA_TYPE=sequential` for incrementing values {"value": 1}, {"value": 2}, {"value": 3}, ...
-```
