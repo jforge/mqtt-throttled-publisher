@@ -9,6 +9,7 @@ A high-performance MQTT publisher tool that publishes realistic sensor data to m
 - **Flexible Data Output**:
   - **Realistic Sensor Data**: Generates industrial sensor data (temperature, humidity, pressure, etc.) by default
   - set **`OUTPUT_DATA_TYPE=float`** for simplified JSON like `{ "value": 42.37 }`
+  - set **`OUTPUT_DATA_TYPE=sequential`** for sequential JSON values like `{ "value": 1 }`, `{ "value": 2 }`, ...
 - **Configurable Topic Template**:  
   Use placeholders like `{sensor_id}` to control the MQTT topic format.  
   By default topic is: `sensor/data/{sensor_id:04d}`  
@@ -101,7 +102,7 @@ Key parameters:
 - `--endpoints`: Number of endpoints (default: 2000)
 - `--client-id`: MQTT client ID (auto-generated if not specified)
 - `--topic-template`: MQTT topic template (default: sensor/data/{sensor_id:04d})
-- `--output-data-type`: Output data type ("sensor" or "float", default: sensor)
+- `--output-data-type`: Output data type ("sensor", "float", or "sequential", default: sensor)
 - `--endpoint-interval`: Per-endpoint rate limit in seconds (default: 17.65)
 - `--check-interval`: How often to check for eligible endpoints (default: 5.0)
 - `--spread-interval`: Time to spread messages over (default: 30.0)
@@ -119,7 +120,7 @@ Key parameters:
 | `MQTT_CLIENT_ID`    | generated_id                | MQTT client id                            |
 | `ENDPOINTS`         | 2000                        | Number of endpoints                       |
 | `TOPIC_TEMPLATE`    | sensor/data/{sensor_id:04d} | Topic template (must include {sensor_id}) |
-| `OUTPUT_DATA_TYPE`  | sensor                      | Output format: sensor (detailed JSON)<br/> or float (simple value) |
+| `OUTPUT_DATA_TYPE`  | sensor                      | Output format: sensor (detailed JSON)<br/> float (random value)<br/> or sequential (1, 2, 3, ...) |
 | `ENDPOINT_INTERVAL` | 17.65                       | Per-endpoint rate limit (seconds)         |
 | `CHECK_INTERVAL`    | 5.0                         | Check frequency (seconds)                 |
 | `SPREAD_INTERVAL`   | 30.0                        | Spread distribution time (seconds)        |
@@ -161,6 +162,14 @@ temperature, humidity, pressure, vibration, voltage, current, power, flow, level
 
 ``` json
 { "value": 37.84 }
+```
+
+### Sequential mode (`OUTPUT_DATA_TYPE=sequential`)
+
+```json
+{ "value": 1 }
+{ "value": 2 }
+{ "value": 3 }
 ```
 
 ## Monitoring and Logs
@@ -280,4 +289,5 @@ For issues and questions:
     - Added setup client ID via `MQTT_CLIENT_ID` environment variable
 - **v1.0.2**:
     - Added fallback to stdout when file logging fails (e.g., OpenShift read-only filesystem)
-```
+- **v1.0.3**:
+    - Added `OUTPUT_DATA_TYPE=sequential` for incrementing values {"value": 1}, {"value": 2}, {"value": 3}, ...
